@@ -1,4 +1,4 @@
-AMREX_HOME  = /opt/amrex
+AMREX_HOME  = $(AMRIC_HOME)/amrex
 PICSAR_HOME ?= ../picsar
 OPENBC_HOME ?= ../openbc_poisson
 
@@ -20,11 +20,11 @@ COMP = gcc
 #COMP = pgi
 
 USE_HDF5=TRUE
-HDF5_HOME=/opt/hdf5-1.12.2/install
+HDF5_HOME=$(AMRIC_H5_HOME)
 
-USE_HDF5_SZ3 = TRUE
+#USE_HDF5_SZ3 = TRUE
 #SZ3_HOME = /opt/orisz3/install
-SZ3_HOME = /opt/SZ3/install
+#SZ3_HOME = /opt/SZ3/install
 #SZ3_HOME = /opt/SZ_SLE/install
 
 #TINY_PROFILE   = TRUE
