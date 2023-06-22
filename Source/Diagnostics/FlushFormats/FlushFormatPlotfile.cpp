@@ -10,7 +10,6 @@
 #include "Utils/TextMsg.H"
 #include "Utils/WarpXProfilerWrapper.H"
 #include "WarpX.H"
-#include "Diagnostics/MultiDiagnostics.H"
 
 #include <AMReX.H>
 #include <AMReX_Box.H>
@@ -87,15 +86,23 @@ FlushFormatPlotfile::WriteToFile (
     VisMF::Header::Version current_version = VisMF::GetHeaderVersion();
     VisMF::SetHeaderVersion(amrex::VisMF::Header::Version_v1);
     if (plot_raw_fields) rfs.emplace_back("raw_fields");
-    amrex::WriteMultiLevelPlotfile(filename, nlev,
+    //if (nlev>1) std::cout << "ratio: " << warpx.refRatio()[0] << std::endl;
+    auto dPlotFileTime0 = amrex::second();
+    //amrex::WriteMultiLevelPlotfile(filename, nlev,
+    amrex::WriteMultiLevelPlotfileHDF5SingleDset(filename, nlev,
+    //amrex::WriteMultiLevelPlotfileHDF5MultiDset(filename, nlev,
                                    amrex::GetVecOfConstPtrs(mf),
                                    varnames, geom,
                                    static_cast<Real>(time), iteration, warpx.refRatio(),
+                                   "SZ@0",
                                    "HyperCLaw-V1.1",
                                    "Level_",
                                    "Cell",
-                                   rfs
-                                   );
+                                   rfs);
+    auto  dPlotFileTime = amrex::second() - dPlotFileTime0;
+    const int IOProc        = ParallelDescriptor::IOProcessorNumber();
+    ParallelDescriptor::ReduceRealMax(dPlotFileTime,IOProc);
+    amrex::Print() << "Write h5plotfile time = " << dPlotFileTime << "  seconds" << "\n\n";
 
     WriteAllRawFields(plot_raw_fields, nlev, filename, plot_raw_fields_guards);
 
@@ -307,27 +314,6 @@ FlushFormatPlotfile::WriteWarpXHeader(
         HeaderFile << warpx.getdo_moving_window() << "\n";
 
         HeaderFile << warpx.time_of_last_gal_shift << "\n";
-
-        for (int idiag = 0; idiag < warpx.GetMultiDiags().GetTotalDiags(); ++idiag)
-        {
-            if( warpx.GetMultiDiags().diagstypes(idiag) == DiagTypes::BackTransformed )
-            {
-                auto& diag = warpx.GetMultiDiags().GetDiag(idiag);
-                for (int i_buffer=0; i_buffer<diag.getnumbuffers(); ++i_buffer){
-                    HeaderFile << diag.gettlab(i_buffer) << "\n";
-                    HeaderFile << diag.get_buffer_k_index_hi(i_buffer) << "\n";
-                    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-                        HeaderFile << diag.get_snapshot_domain_lo(i_buffer, idim) << "\n";
-                    }
-                    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-                        HeaderFile << diag.get_snapshot_domain_hi(i_buffer, idim) << "\n";
-                    }
-                    HeaderFile << diag.get_flush_counter(i_buffer) << "\n";
-                    HeaderFile << diag.get_last_valid_Zslice(i_buffer) << "\n";
-                    HeaderFile << diag.get_snapshot_full_flag(i_buffer) << "\n";
-                }
-            }
-        }
     }
 }
 
